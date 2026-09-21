@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UME lite2</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <div id="editor-container">
+        <!-- メニューバー -->
+        <div id="menu-bar">
+            <button id="new-button">📄</button>
+            <button id="open-button">📁</button>
+            <button id="save-button">💾</button>
+            <span class="menu-separator"></span>
+            <button id="copy-button" title="コピー">📜</button>
+            <button id="cut-button" title="切り取り">✂</button>
+            <button id="paste-button" title="貼り付け">📋</button>
+
+            <span class="menu-separator"></span>
+            <span id="file-name">no_title.txt</span>
+            <span class="menu-separator"></span>
+
+            <button id="font-16">16p</button>
+            <button id="font-20">20p</button>
+            <button id="font-24">24p</button>
+        </div>
+
+        <!-- アウトライン -->
+        <div id="outline"></div>
+
+        <!-- エディタ領域 -->
+        <div id="editor-area">
+            <!-- 現在行表示用 -->
+            <div id="current-line"></div>
+
+            <!-- 装飾表示用（第1段階では既存のまま使用） -->
+            <div id="display-layer"></div>
+
+            <!-- カーソル座標取得用 -->
+            <div id="cursor-measure"></div>
+
+            <!-- EditContext 編集領域 -->
+            <div id="editor" tabindex="0" role="textbox" aria-multiline="true" spellcheck="false"></div>
+        </div>
+
+    </div>
+
+    <script type="module" src="./main.js"></script>
+
+</body>
+
+</html>

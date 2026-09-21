@@ -1,0 +1,12 @@
+{
+  "name": "ume-lite2",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "vite": "^8.2.2"
+  }
+}

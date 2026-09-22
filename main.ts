@@ -1356,10 +1356,10 @@ editor.addEventListener("scroll", () => {
 
     const renderedEndVisual =
         renderedEndLine >= 0 &&
-        renderedEndLine < wrappedLineCounts.length
+            renderedEndLine < wrappedLineCounts.length
             ?
-                (visualLineStarts[renderedEndLine] ?? 0) +
-                (wrappedLineCounts[renderedEndLine] ?? 1)
+            (visualLineStarts[renderedEndLine] ?? 0) +
+            (wrappedLineCounts[renderedEndLine] ?? 1)
             : 0;
 
     if (
@@ -1435,30 +1435,53 @@ function jumpToOutlineLine(line: number): void {
         targetPosition
     );
 
-    const visualLine = getCurrentVisualLine();
     const style = getComputedStyle(editor);
-    const lineHeight = parseFloat(style.lineHeight);
-    const paddingTop = parseFloat(style.paddingTop);
-    const caretTop =
-        paddingTop +
-        visualLine * lineHeight;
-    const caretBottom =
-        caretTop +
-        lineHeight;
 
-    if (caretTop < editor.scrollTop) {
-        editor.scrollTop = Math.max(
-            0,
-            caretTop - paddingTop
-        );
-    } else if (
-        caretBottom >
-        editor.scrollTop + editor.clientHeight
-    ) {
+    const lineHeight =
+        parseFloat(style.lineHeight);
+
+    const paddingTop =
+        parseFloat(style.paddingTop);
+
+    /*
+     * 見出しジャンプ先を
+     * エディタ上端から5行目に置く。
+     *
+     * 1行目 = 0
+     * 5行目 = 4
+     */
+    const targetTop =
+        paddingTop +
+        lineHeight * 4;
+
+    if (currentCaretRect) {
+        const areaRect =
+            editorArea.getBoundingClientRect();
+
+        const currentTop =
+            currentCaretRect.top -
+            areaRect.top;
+
+        const newScrollTop =
+            editor.scrollTop +
+            currentTop -
+            targetTop;
+
+        const maxScrollTop =
+            Math.max(
+                0,
+                editor.scrollHeight -
+                editor.clientHeight
+            );
+
         editor.scrollTop =
-            caretBottom -
-            editor.clientHeight +
-            paddingTop;
+            Math.max(
+                0,
+                Math.min(
+                    newScrollTop,
+                    maxScrollTop
+                )
+            );
     }
 
     renderDisplayLayer();

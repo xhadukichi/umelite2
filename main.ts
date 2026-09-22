@@ -184,6 +184,65 @@ function updateSelectionBounds(): void {
     currentCaretRect = characterRange.getBoundingClientRect();
 }
 
+function keepCaretVisible(): void {
+    const visualLine = getCurrentVisualLine();
+
+    const style = getComputedStyle(editor);
+    const lineHeight = parseFloat(style.lineHeight);
+    const paddingTop = parseFloat(style.paddingTop);
+    const paddingBottom = parseFloat(style.paddingBottom);
+
+    /*
+     * カーソル位置はDOMの文字矩形ではなく、
+     * 既存の表示行計算を使う。
+     * これにより空行も1表示行として扱える。
+     */
+    const caretTop =
+        paddingTop +
+        visualLine * lineHeight;
+
+    const caretBottom =
+        caretTop +
+        lineHeight;
+
+    const topLimit =
+        editor.scrollTop + paddingTop;
+
+    /*
+     * 下から3行目を追従位置にする。
+     */
+    const bottomLimit =
+        editor.scrollTop +
+        editor.clientHeight -
+        paddingBottom -
+        lineHeight;
+
+    if (caretTop < topLimit) {
+        editor.scrollTop = Math.max(
+            0,
+            caretTop - paddingTop
+        );
+        return;
+    }
+
+    if (caretBottom > bottomLimit) {
+        const maxScrollTop =
+            Math.max(
+                0,
+                editor.scrollHeight -
+                editor.clientHeight
+            );
+
+        editor.scrollTop = Math.min(
+            maxScrollTop,
+            caretBottom -
+            (editor.clientHeight -
+             paddingBottom -
+             lineHeight)
+        );
+    }
+}
+
 function updateControlBounds(): void {
     editContext.updateControlBounds(
         editor.getBoundingClientRect()
@@ -630,6 +689,7 @@ function updateAll(): void {
     renderDisplayLayer();
     updateOutline();
     showCurrentLineIfVisible();
+    keepCaretVisible();
 }
 
 function createNewFile(): void {
@@ -974,6 +1034,10 @@ editContext.addEventListener("compositionend", (event: CompositionEvent) => {
         "EDITCONTEXT compositionend:",
         event.data
     );
+
+    requestAnimationFrame(() => {
+        keepCaretVisible();
+    });
 });
 
 editContext.addEventListener("textupdate", (event: any) => {
@@ -1127,11 +1191,13 @@ editContext.addEventListener("textupdate", (event: any) => {
      * 画面へ反映する。
      */
     renderEditorText();
+    keepCaretVisible();
 
     const t2 = performance.now();
 
     updateCurrentHeading();
     showCurrentLineIfVisible();
+    keepCaretVisible();
 
     lastValue = getEditorText();
     lastCursor = getEditorSelectionStart();
@@ -1264,6 +1330,7 @@ editor.addEventListener("keydown", (event: KeyboardEvent) => {
     }
 });
 
+
 /* ==========================================================
    Selection change
    ========================================================== */
@@ -1281,6 +1348,8 @@ document.addEventListener("selectionchange", () => {
     );
 
     updateSelectionBounds();
+    keepCaretVisible();
+
     updateCurrentHeading();
     showCurrentLineIfVisible();
 

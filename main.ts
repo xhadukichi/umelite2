@@ -237,8 +237,8 @@ function keepCaretVisible(): void {
             maxScrollTop,
             caretBottom -
             (editor.clientHeight -
-             paddingBottom -
-             lineHeight)
+                paddingBottom -
+                lineHeight)
         );
     }
 }
@@ -460,7 +460,15 @@ function findLineAtVisualLine(target: number): number {
 }
 
 function renderDisplayLayer(): void {
-    const style = getComputedStyle(editor);
+    const editorStyle = getComputedStyle(editor);
+
+    const scrollbarWidth =
+        editor.offsetWidth - editor.clientWidth;
+
+    displayLayer.style.paddingRight =
+        `${parseFloat(editorStyle.paddingRight) + scrollbarWidth}px`;
+
+    const style = editorStyle;
     const lineHeight = parseFloat(style.lineHeight);
     const paddingTop = parseFloat(style.paddingTop);
     const paddingBottom = parseFloat(style.paddingBottom);

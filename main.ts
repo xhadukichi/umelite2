@@ -571,16 +571,72 @@ function getCurrentVisualLine(): number {
         lineStarts
     );
 
-    const height = analyseCursorWrappedHeight(
-        lineText,
-        position.x,
-        editor
+    /*
+     * 空行ではDOMのcaret矩形を使わない。
+     * 空行は visualLineStarts に1行として
+     * すでに登録されているので、その位置をそのまま使う。
+     */
+    if (lineText.length === 0) {
+        return visualLineStarts[position.line] ?? 0;
+    }
+
+    /*
+     * 文字がある行では、実際のDOM上の文字矩形を使う。
+     * 自動折り返し2行目の1文字目も、
+     * その文字の実位置から取得できる。
+     */
+    if (currentCaretRect) {
+        const areaRect =
+            editorArea.getBoundingClientRect();
+
+        const lineHeight =
+            parseFloat(
+                getComputedStyle(editor).lineHeight
+            );
+
+        if (lineHeight > 0) {
+            const contentTop =
+                currentCaretRect.top -
+                areaRect.top +
+                editor.scrollTop -
+                parseFloat(
+                    getComputedStyle(editor).paddingTop
+                );
+
+            return Math.max(
+                0,
+                Math.round(
+                    contentTop / lineHeight
+                )
+            );
+        }
+    }
+
+    /*
+     * DOM矩形が取得できない場合の従来計算。
+     */
+    const height =
+        analyseCursorWrappedHeight(
+            lineText,
+            position.x,
+            editor
+        );
+
+    const lineHeight =
+        parseFloat(
+            getComputedStyle(editor).lineHeight
+        );
+
+    const wrappedRow =
+        analyseWrappedRow(
+            height,
+            lineHeight
+        );
+
+    return (
+        (visualLineStarts[position.line] ?? 0) +
+        wrappedRow
     );
-
-    const lineHeight = parseFloat(getComputedStyle(editor).lineHeight);
-    const wrappedRow = analyseWrappedRow(height, lineHeight);
-
-    return (visualLineStarts[position.line] ?? 0) + wrappedRow;
 }
 
 function isCursorOnScreen(visualLine: number): boolean {
@@ -597,19 +653,25 @@ function isCursorOnScreen(visualLine: number): boolean {
 }
 
 function updateCurrentLine(): void {
-    if (!highlightVisible || !currentCaretRect) {
+    if (!highlightVisible) {
         currentLine.style.display = "none";
         return;
     }
 
-    const areaRect =
-        editorArea.getBoundingClientRect();
+    const style =
+        getComputedStyle(editor);
 
     const lineHeight =
-        parseFloat(getComputedStyle(editor).lineHeight);
+        parseFloat(style.lineHeight);
+
+    const paddingTop =
+        parseFloat(style.paddingTop);
+
+    const visualLine =
+        getCurrentVisualLine();
 
     currentLine.style.top =
-        `${currentCaretRect.top - areaRect.top}px`;
+        `${paddingTop + visualLine * lineHeight - editor.scrollTop}px`;
     currentLine.style.height =
         `${lineHeight}px`;
     currentLine.style.display = "block";
@@ -618,18 +680,28 @@ function updateCurrentLine(): void {
 function showCurrentLineIfVisible(): void {
     updateSelectionBounds();
 
-    if (!currentCaretRect) {
-        highlightVisible = false;
-        currentLine.style.display = "none";
-        return;
-    }
+    const style =
+        getComputedStyle(editor);
 
-    const areaRect =
-        editorArea.getBoundingClientRect();
+    const lineHeight =
+        parseFloat(style.lineHeight);
+
+    const paddingTop =
+        parseFloat(style.paddingTop);
+
+    const visualLine =
+        getCurrentVisualLine();
+
+    const lineTop =
+        paddingTop +
+        visualLine * lineHeight;
+
+    const lineBottom =
+        lineTop + lineHeight;
 
     if (
-        currentCaretRect.bottom <= areaRect.top ||
-        currentCaretRect.top >= areaRect.bottom
+        lineBottom <= editor.scrollTop ||
+        lineTop >= editor.scrollTop + editor.clientHeight
     ) {
         highlightVisible = false;
         currentLine.style.display = "none";
@@ -1438,15 +1510,7 @@ editor.addEventListener("scroll", () => {
         renderDisplayLayer();
     }
 
-    updateSelectionBounds();
-
-    if (currentCaretRect) {
-        highlightVisible = true;
-        updateCurrentLine();
-    } else {
-        highlightVisible = false;
-        currentLine.style.display = "none";
-    }
+    showCurrentLineIfVisible();
 });
 
 /* ==========================================================

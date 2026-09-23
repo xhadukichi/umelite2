@@ -145,6 +145,32 @@ body {
 /* ================================
    装飾表示
    ================================ */
+#clone-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+
+    box-sizing: border-box;
+    padding: 20px;
+
+    font-family: Consolas, Monaco, monospace;
+    font-size: var(--editor-font-size);
+    line-height: var(--editor-line-height);
+
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+
+    overflow: hidden;
+
+    background: transparent;
+    color: red;
+
+    pointer-events: none;
+    /*z-index: 4;*/
+    z-index: 9999 !important;
+}
 
 #display-layer {
     position: absolute;
@@ -168,8 +194,11 @@ body {
 
     pointer-events: none;
 
+    color: transparent; /* 文字を透明化して二重を防ぐ */
+
     z-index: 3;
 }
+
 
 
 /* ================================

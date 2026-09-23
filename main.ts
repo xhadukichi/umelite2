@@ -12,6 +12,9 @@ const editor = document.querySelector<HTMLDivElement>("#editor")!;
 const editorArea =
     document.querySelector<HTMLDivElement>("#editor-area")!;
 const displayLayer = document.querySelector<HTMLDivElement>("#display-layer")!;
+const cloneLayer = editor.cloneNode(true) as HTMLDivElement;
+cloneLayer.id = "clone-layer";
+editorArea.appendChild(cloneLayer);
 const outline = document.querySelector<HTMLDivElement>("#outline")!;
 const currentLine = document.querySelector<HTMLDivElement>("#current-line")!;
 const fileName = document.querySelector<HTMLSpanElement>("#file-name")!;
@@ -292,6 +295,26 @@ function renderEditorText(): void {
         document.createTextNode(editContext.text)
     );
 
+    //ここから見出し用レイヤーの描画。見出しは赤、それ以外は透明に
+    cloneLayer.innerHTML = "";
+
+    const lines = editContext.text.split("\n");
+
+    for (const line of lines) {
+        const span = document.createElement("span");
+
+        span.textContent = line;
+
+        if (/^#{1,6} /.test(line)) {
+            span.style.color = "red";
+        } else {
+            span.style.color = "transparent";
+        }
+
+        cloneLayer.appendChild(span);
+        cloneLayer.appendChild(document.createTextNode("\n"));
+    }
+
     setDomSelection(
         editContext.selectionStart,
         editContext.selectionEnd
@@ -411,6 +434,28 @@ function rebuildVisualLineIndex(): void {
         "MAX", analyseMax.toFixed(2), "ms",
         "MAX LINE", analyseMaxLine
     );
+
+    console.log("=== VISUAL LINE CHECK ===");
+    console.log("font size:", getComputedStyle(editor).fontSize);
+    console.log("line height:", getComputedStyle(editor).lineHeight);
+    console.log("wrappedLineCounts:", wrappedLineCounts.slice(340, 350));
+    console.log("visualLineStarts:", visualLineStarts.slice(340, 350));
+    console.log("=== VISUAL LINE DETAIL ===");
+
+    wrappedLineCounts.forEach((count, i) => {
+        if (count > 1) {
+            console.log({
+                logicalLine: i,
+                wrappedLines: count,
+                visualStart: visualLineStarts[i],
+                text: analyseLineText(
+                    getEditorText(),
+                    i,
+                    lineStarts
+                )
+            });
+        }
+    });
 }
 
 function updateVisualLineIndexForCurrentLine(line: number): void {
@@ -509,7 +554,7 @@ function renderDisplayLayer(): void {
         const line = analyseLineText(getEditorText(), i, lineStarts);
         const span = document.createElement("span");
         span.textContent = line;
-        span.style.color = /^#{1,6} /.test(line) ? "red" : "transparent";
+        /* span.style.color = /^#{1,6} /.test(line) ? "red" : "transparent"; */
         displayLayer.appendChild(span);
 
         if (i < endLine) {
@@ -584,7 +629,42 @@ function getCurrentVisualLine(): number {
      * 空行は visualLineStarts に1行として
      * すでに登録されているので、その位置をそのまま使う。
      */
+    /*　空行対策
     if (lineText.length === 0) {
+        return visualLineStarts[position.line] ?? 0;
+    } */
+    if (lineText.length === 0) {
+        const textNode = editor.firstChild;
+
+        if (textNode && textNode.nodeType === Node.TEXT_NODE) {
+            const cursor = getEditorSelectionStart();
+
+            if (cursor > 0) {
+                const range = document.createRange();
+
+                range.setStart(textNode, cursor - 1);
+                range.setEnd(textNode, cursor);
+
+                const rect = range.getBoundingClientRect();
+                const areaRect = editorArea.getBoundingClientRect();
+                const lineHeight =
+                    parseFloat(getComputedStyle(editor).lineHeight);
+
+                if (lineHeight > 0 && rect.height > 0) {
+                    const contentTop =
+                        rect.top -
+                        areaRect.top +
+                        editor.scrollTop -
+                        parseFloat(getComputedStyle(editor).paddingTop);
+
+                    return Math.max(
+                        0,
+                        Math.round(contentTop / lineHeight)
+                    ) + 1;
+                }
+            }
+        }
+
         return visualLineStarts[position.line] ?? 0;
     }
 
@@ -842,6 +922,20 @@ function saveFileAs(): boolean {
     console.log("SAVED AS:", currentFileName);
     return true;
 }
+
+// クローン赤文字画面のスクロール同期
+editor.addEventListener("scroll", () => {
+     console.log(
+        "editor:",
+        editor.scrollTop,
+        "clone:",
+        cloneLayer.getBoundingClientRect().top,
+        "editorRect:",
+        editor.getBoundingClientRect().top
+    );
+    cloneLayer.style.transform =
+        `translate(${-editor.scrollLeft}px, ${-editor.scrollTop}px)`;
+});
 
 newButton.addEventListener("click", () => {
     if (!isModified) {
@@ -1637,6 +1731,11 @@ function jumpToOutlineLine(line: number): void {
    ========================================================== */
 
 window.addEventListener("resize", () => {
+    const container = document.getElementById("editor-container");
+    if (container && window.visualViewport) {
+        container.style.height = `${window.visualViewport.height}px`;
+    }
+
     const width = editor.clientWidth;
 
     if (width === lastEditorWidth) return;

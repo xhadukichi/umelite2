@@ -315,6 +315,18 @@ function renderEditorText(): void {
         cloneLayer.appendChild(document.createTextNode("\n"));
     }
 
+    const headings = [...cloneLayer.children].filter(
+        el => /^#{1,6} /.test(el.textContent ?? "")
+    );
+
+    // 一時的テスト挿入
+    console.log(
+        headings.slice(-5).map(el => ({
+            text: el.textContent,
+            top: el.getBoundingClientRect().top
+        }))
+    );
+
     setDomSelection(
         editContext.selectionStart,
         editContext.selectionEnd
@@ -758,11 +770,24 @@ function updateCurrentLine(): void {
     const visualLine =
         getCurrentVisualLine();
 
+    /* if (currentCaretRect) {
+        const areaRect = editorArea.getBoundingClientRect();
+
+        currentLine.style.top =
+            `${currentCaretRect.top - areaRect.top}px`;
+    } else {
+        currentLine.style.top =
+            `${paddingTop + visualLine * lineHeight - editor.scrollTop}px`;
+    } */
     currentLine.style.top =
         `${paddingTop + visualLine * lineHeight - editor.scrollTop}px`;
-    currentLine.style.height =
-        `${lineHeight}px`;
-    currentLine.style.display = "block";
+
+    console.log(
+        "DRAW CURRENT LINE:",
+        "display=", currentLine.style.display,
+        "top=", currentLine.style.top,
+        "rect=", currentLine.getBoundingClientRect()
+    );
 }
 
 function showCurrentLineIfVisible(): void {
@@ -777,6 +802,7 @@ function showCurrentLineIfVisible(): void {
     const paddingTop =
         parseFloat(style.paddingTop);
 
+
     const visualLine =
         getCurrentVisualLine();
 
@@ -787,10 +813,19 @@ function showCurrentLineIfVisible(): void {
     const lineBottom =
         lineTop + lineHeight;
 
+    console.log(
+        "CURRENT LINE:",
+        "visualLine=", visualLine,
+        "scrollTop=", editor.scrollTop,
+        "clientHeight=", editor.clientHeight,
+        "lineTop=", lineTop
+    );
+
     if (
         lineBottom <= editor.scrollTop ||
         lineTop >= editor.scrollTop + editor.clientHeight
     ) {
+        console.log("★ highlightVisible FALSE: showCurrentLineIfVisible");
         highlightVisible = false;
         currentLine.style.display = "none";
         return;
@@ -801,6 +836,7 @@ function showCurrentLineIfVisible(): void {
 }
 
 function hideCurrentLine(): void {
+    console.log("★ highlightVisible FALSE: hideCurrentLine");
     highlightVisible = false;
     currentLine.style.display = "none";
 }
@@ -925,7 +961,7 @@ function saveFileAs(): boolean {
 
 // クローン赤文字画面のスクロール同期
 editor.addEventListener("scroll", () => {
-     console.log(
+    console.log(
         "editor:",
         editor.scrollTop,
         "clone:",
@@ -1535,10 +1571,19 @@ document.addEventListener("selectionchange", () => {
    ========================================================== */
 
 editor.addEventListener("click", () => {
+
     updateCurrentHeading();
+
     showCurrentLineIfVisible();
+
+    highlightVisible = true;
+    currentLine.style.display = "block";
+    updateCurrentLine();
+
     logCursorAnalysis();
+
     lastCursor = getEditorSelectionStart();
+
 });
 
 /* ==========================================================

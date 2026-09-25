@@ -21,6 +21,7 @@ const fileName = document.querySelector<HTMLSpanElement>("#file-name")!;
 const newButton = document.querySelector<HTMLButtonElement>("#new-button")!;
 const openButton = document.querySelector<HTMLButtonElement>("#open-button")!;
 const saveButton = document.querySelector<HTMLButtonElement>("#save-button")!;
+const APP_VERSION = "0.1.0";
 
 /* ==========================================================
    EditContext
@@ -1081,6 +1082,12 @@ const font20Button =
 const font24Button =
     document.querySelector<HTMLButtonElement>("#font-24");
 
+const helpButton =
+    document.querySelector<HTMLButtonElement>("#help")!
+        .addEventListener("click", () => {
+            alert(`UME lite2\n\nVersion ${APP_VERSION}`);
+        });
+
 /*
  * メニューボタンを押してもエディタのSelectionを失わせない。
  */
@@ -1215,6 +1222,8 @@ font20Button?.addEventListener("click", () => {
 font24Button?.addEventListener("click", () => {
     setEditorFontSize(24);
 });
+
+
 
 document.addEventListener("keydown", (event: KeyboardEvent) => {
     if (event.isComposing) {

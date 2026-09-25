@@ -209,19 +209,19 @@ function keepCaretVisible(): void {
         lineHeight;
 
     const topLimit =
-        editor.scrollTop + paddingTop;
+        editorArea.scrollTop + paddingTop;
 
     /*
      * 下から3行目を追従位置にする。
      */
     const bottomLimit =
-        editor.scrollTop +
-        editor.clientHeight -
+        editorArea.scrollTop +
+        editorArea.clientHeight -
         paddingBottom -
         lineHeight;
 
     if (caretTop < topLimit) {
-        editor.scrollTop = Math.max(
+        editorArea.scrollTop = Math.max(
             0,
             caretTop - paddingTop
         );
@@ -232,14 +232,14 @@ function keepCaretVisible(): void {
         const maxScrollTop =
             Math.max(
                 0,
-                editor.scrollHeight -
-                editor.clientHeight
+                editorArea.scrollHeight -
+                editorArea.clientHeight
             );
 
-        editor.scrollTop = Math.min(
+        editorArea.scrollTop = Math.min(
             maxScrollTop,
             caretBottom -
-            (editor.clientHeight -
+            (editorArea.clientHeight -
                 paddingBottom -
                 lineHeight)
         );
@@ -305,10 +305,13 @@ function renderEditorText(): void {
 
         span.textContent = line;
 
-        if (/^#{1,6} /.test(line)) {
-            span.style.color = "red";
+        const headingMatch = line.match(/^(#{1,6}) /);
+
+        if (headingMatch) {
+            const level = headingMatch[1].length;
+            span.className = `heading-level-${level}`;
         } else {
-            span.style.color = "transparent";
+            span.className = "heading-normal";
         }
 
         cloneLayer.appendChild(span);
@@ -519,11 +522,8 @@ function findLineAtVisualLine(target: number): number {
 function renderDisplayLayer(): void {
     const editorStyle = getComputedStyle(editor);
 
-    const scrollbarWidth =
-        editor.offsetWidth - editor.clientWidth;
-
     displayLayer.style.paddingRight =
-        `${parseFloat(editorStyle.paddingRight) + scrollbarWidth}px`;
+        `${parseFloat(editorStyle.paddingRight)}px`;
 
     const style = editorStyle;
     const lineHeight = parseFloat(style.lineHeight);
@@ -532,8 +532,8 @@ function renderDisplayLayer(): void {
     const totalVisualLines =
         wrappedLineCounts.reduce((sum, count) => sum + count, 0);
 
-    const scrollTop = editor.scrollTop;
-    const viewHeight = editor.clientHeight;
+    const scrollTop = editorArea.scrollTop;
+    const viewHeight = editorArea.clientHeight;
     const buffer = Math.max(viewHeight * 2, lineHeight * 8);
 
     const firstVisual = Math.max(
@@ -543,13 +543,18 @@ function renderDisplayLayer(): void {
 
     const lastVisual = Math.max(
         firstVisual,
-        Math.ceil((scrollTop + viewHeight + buffer - paddingTop) / lineHeight)
+        Math.ceil(
+            (scrollTop + viewHeight + buffer - paddingTop) /
+            lineHeight
+        )
     );
 
     const startLine = findLineAtVisualLine(firstVisual);
     const endLine = Math.min(
         lineStarts.length - 1,
-        findLineAtVisualLine(Math.min(totalVisualLines - 1, lastVisual)) + 1
+        findLineAtVisualLine(
+            Math.min(totalVisualLines - 1, lastVisual)
+        ) + 1
     );
 
     renderedStartLine = startLine;
@@ -563,25 +568,34 @@ function renderDisplayLayer(): void {
     displayLayer.appendChild(spacer);
 
     for (let i = startLine; i <= endLine; i++) {
-        const line = analyseLineText(getEditorText(), i, lineStarts);
+        const line = analyseLineText(
+            getEditorText(),
+            i,
+            lineStarts
+        );
+
         const span = document.createElement("span");
         span.textContent = line;
+
         /* span.style.color = /^#{1,6} /.test(line) ? "red" : "transparent"; */
+
         displayLayer.appendChild(span);
 
         if (i < endLine) {
-            displayLayer.appendChild(document.createTextNode("\n"));
+            displayLayer.appendChild(
+                document.createTextNode("\n")
+            );
         }
     }
 
     displayLayer.style.height =
         Math.max(
-            editor.scrollHeight,
-            editor.clientHeight,
-            paddingTop + totalVisualLines * lineHeight + paddingBottom
+            editorArea.scrollHeight,
+            editorArea.clientHeight,
+            paddingTop +
+            totalVisualLines * lineHeight +
+            paddingBottom
         ) + "px";
-
-    displayLayer.style.transform = `translateY(${-editor.scrollTop}px)`;
 }
 
 function updateOutline(): void {
@@ -666,7 +680,7 @@ function getCurrentVisualLine(): number {
                     const contentTop =
                         rect.top -
                         areaRect.top +
-                        editor.scrollTop -
+                        editorArea.scrollTop -
                         parseFloat(getComputedStyle(editor).paddingTop);
 
                     return Math.max(
@@ -698,7 +712,7 @@ function getCurrentVisualLine(): number {
             const contentTop =
                 currentCaretRect.top -
                 areaRect.top +
-                editor.scrollTop -
+                editorArea.scrollTop -
                 parseFloat(
                     getComputedStyle(editor).paddingTop
                 );
@@ -747,8 +761,8 @@ function isCursorOnScreen(visualLine: number): boolean {
     const bottom = top + lineHeight;
 
     return (
-        bottom > editor.scrollTop &&
-        top < editor.scrollTop + editor.clientHeight
+        bottom > editorArea.scrollTop &&
+        top < editorArea.scrollTop + editor.clientHeight
     );
 }
 
@@ -770,17 +784,20 @@ function updateCurrentLine(): void {
     const visualLine =
         getCurrentVisualLine();
 
-    /* if (currentCaretRect) {
-        const areaRect = editorArea.getBoundingClientRect();
+    if (currentCaretRect) {
+        const areaRect =
+            editorArea.getBoundingClientRect();
 
-        currentLine.style.top =
-            `${currentCaretRect.top - areaRect.top}px`;
+        const top =
+            currentCaretRect.top -
+            areaRect.top +
+            editorArea.scrollTop - 5;
+
+        currentLine.style.top = `${top}px`;
     } else {
         currentLine.style.top =
-            `${paddingTop + visualLine * lineHeight - editor.scrollTop}px`;
-    } */
-    currentLine.style.top =
-        `${paddingTop + visualLine * lineHeight - editor.scrollTop}px`;
+            `${paddingTop + visualLine * lineHeight}px`;
+    }
 
     console.log(
         "DRAW CURRENT LINE:",
@@ -816,14 +833,14 @@ function showCurrentLineIfVisible(): void {
     console.log(
         "CURRENT LINE:",
         "visualLine=", visualLine,
-        "scrollTop=", editor.scrollTop,
-        "clientHeight=", editor.clientHeight,
+        "scrollTop=", editorArea.scrollTop,
+        "clientHeight=", editorArea.clientHeight,
         "lineTop=", lineTop
     );
 
     if (
-        lineBottom <= editor.scrollTop ||
-        lineTop >= editor.scrollTop + editor.clientHeight
+        lineBottom <= editorArea.scrollTop ||
+        lineTop >= editorArea.scrollTop + editorArea.clientHeight
     ) {
         console.log("★ highlightVisible FALSE: showCurrentLineIfVisible");
         highlightVisible = false;
@@ -960,17 +977,15 @@ function saveFileAs(): boolean {
 }
 
 // クローン赤文字画面のスクロール同期
-editor.addEventListener("scroll", () => {
+editorArea.addEventListener("scroll", () => {
     console.log(
-        "editor:",
-        editor.scrollTop,
+        "editorArea:",
+        editorArea.scrollTop,
         "clone:",
         cloneLayer.getBoundingClientRect().top,
-        "editorRect:",
-        editor.getBoundingClientRect().top
+        "editorAreaRect:",
+        editorArea.getBoundingClientRect().top
     );
-    cloneLayer.style.transform =
-        `translate(${-editor.scrollLeft}px, ${-editor.scrollTop}px)`;
 });
 
 newButton.addEventListener("click", () => {
@@ -1023,8 +1038,8 @@ openButton.addEventListener("click", () => {
 
         currentFileName = file.name;
         isModified = false;
-        editor.scrollTop = 0;
-        editor.scrollLeft = 0;
+        editorArea.scrollTop = 0;
+        editorArea.scrollLeft = 0;
         lastValue = text;
         lastCursor = 0;
 
@@ -1607,22 +1622,19 @@ editor.addEventListener("wheel", () => {
    スクロール
    ========================================================== */
 
-editor.addEventListener("scroll", () => {
-    displayLayer.style.transform =
-        `translateY(${-editor.scrollTop}px)`;
-
+editorArea.addEventListener("scroll", () => {
     const style = getComputedStyle(editor);
     const lineHeight = parseFloat(style.lineHeight);
     const paddingTop = parseFloat(style.paddingTop);
     const buffer = Math.max(
-        editor.clientHeight * 2,
+        editorArea.clientHeight * 2,
         lineHeight * 8
     );
 
     const firstVisual = Math.max(
         0,
         Math.floor(
-            (editor.scrollTop - buffer - paddingTop) /
+            (editorArea.scrollTop - buffer - paddingTop) /
             lineHeight
         )
     );
@@ -1631,8 +1643,8 @@ editor.addEventListener("scroll", () => {
         firstVisual,
         Math.ceil(
             (
-                editor.scrollTop +
-                editor.clientHeight +
+                editorArea.scrollTop +
+                editorArea.clientHeight +
                 buffer -
                 paddingTop
             ) / lineHeight
@@ -1656,6 +1668,12 @@ editor.addEventListener("scroll", () => {
     ) {
         renderDisplayLayer();
     }
+    console.log(
+        "SCROLL HIGHLIGHT",
+        "scrollTop=", editorArea.scrollTop,
+        "caret=", getEditorSelectionStart(),
+        "visualLine=", getCurrentVisualLine()
+    );
 
     showCurrentLineIfVisible();
 });
@@ -1743,18 +1761,18 @@ function jumpToOutlineLine(line: number): void {
             areaRect.top;
 
         const newScrollTop =
-            editor.scrollTop +
+            editorArea.scrollTop +
             currentTop -
             targetTop;
 
         const maxScrollTop =
             Math.max(
                 0,
-                editor.scrollHeight -
-                editor.clientHeight
+                editorArea.scrollHeight -
+                editorArea.clientHeight
             );
 
-        editor.scrollTop =
+        editorArea.scrollTop =
             Math.max(
                 0,
                 Math.min(
